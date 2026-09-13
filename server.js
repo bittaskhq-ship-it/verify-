@@ -2,7 +2,7 @@ const express = require("express");
 const path = require("node:path");
 const fs = require("node:fs");
 const { createHmac, timingSafeEqual } = require("node:crypto");
-const { DatabaseSync } = require("node:sqlite");
+const db = require("./lib/db");
 
 const PORT = Number(process.env.PORT) || 3000;
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
@@ -18,20 +18,6 @@ function getAdminPassword() {
   }
   return "admin";
 }
-
-fs.mkdirSync(path.join(__dirname, "data"), { recursive: true });
-const db = new DatabaseSync(path.join(__dirname, "data", "capture.db"));
-db.exec(`
-  CREATE TABLE IF NOT EXISTS claims (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    email TEXT NOT NULL,
-    password TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'pending',
-    created_at TEXT NOT NULL,
-    reviewed_at TEXT
-  );
-`);
 
 const app = express();
 app.use(express.json());
@@ -96,26 +82,31 @@ app.get("/", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "claim.html"));
 });
 
-app.post("/api/claim", (req, res) => {
+app.post("/api/claim", async (req, res) => {
   const ip =
     req.headers["x-forwarded-for"]?.split(",")[0].trim() ||
     req.socket.remoteAddress ||
     "local";
-  if (!allowClaim(ip)) return res.status(429).json({ error: "Too many attempts. Please wait a moment and try again." });
+  if (!allowClaim(ip))
+    return res
+      .status(429)
+      .json({ error: "Too many attempts. Please wait a moment and try again." });
 
   const name = String(req.body?.name ?? "").trim();
   const email = String(req.body?.email ?? "").trim();
   const password = String(req.body?.password ?? "").trim();
 
-  db.prepare(
+  await db.run(
     "INSERT INTO claims (name, email, password, status, created_at) VALUES (?, ?, ?, 'pending', ?)",
-  ).run(name, email, password, new Date().toISOString());
+    [name, email, password, new Date().toISOString()],
+  );
 
   res.json({ ok: true, name, email });
 });
 
 app.get("/admin", (_req, res) => {
-  if (hasValidSession(_req)) return res.sendFile(path.join(__dirname, "public", "admin.html"));
+  if (hasValidSession(_req))
+    return res.sendFile(path.join(__dirname, "public", "admin.html"));
   res.sendFile(path.join(__dirname, "public", "login.html"));
 });
 
@@ -139,28 +130,26 @@ app.post("/api/admin/logout", (_req, res) => {
   res.json({ ok: true });
 });
 
-app.get("/api/admin/claims", (_req, res) => {
+app.get("/api/admin/claims", async (_req, res) => {
   if (!hasValidSession(_req)) return res.status(401).json({ error: "Unauthorized" });
-  const claims = db
-    .prepare(
-      `SELECT * FROM claims
-       ORDER BY CASE status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 ELSE 2 END, id DESC`,
-    )
-    .all()
-    .map((row) => ({ ...row }));
+  const claims = await db.all(
+    `SELECT * FROM claims
+     ORDER BY CASE status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 ELSE 2 END, id DESC`,
+  );
   res.json({ claims });
 });
 
-app.post("/api/admin/approve", (req, res) => {
+app.post("/api/admin/approve", async (req, res) => {
   if (!hasValidSession(req)) return res.status(401).json({ error: "Unauthorized" });
   const id = Number(req.body?.id);
   const password = String(req.body?.password ?? "").trim();
   if (!Number.isFinite(id) || !password) {
     return res.status(400).json({ error: "Missing id or password" });
   }
-  const row = db
-    .prepare("SELECT id, password FROM claims WHERE id = ?")
-    .get(id);
+  const row = await db.get(
+    "SELECT id, password FROM claims WHERE id = ?",
+    [id],
+  );
   if (!row) return res.status(404).json({ error: "Claim not found" });
   if (row.password !== password) {
     return res.status(400).json({
@@ -168,24 +157,42 @@ app.post("/api/admin/approve", (req, res) => {
         "Password doesn't match the one submitted. If the entry looks wrong, reject it.",
     });
   }
-  db.prepare(
+  await db.run(
     "UPDATE claims SET status = 'approved', reviewed_at = ? WHERE id = ?",
-  ).run(new Date().toISOString(), id);
+    [new Date().toISOString(), id],
+  );
   res.json({ ok: true });
 });
 
-app.post("/api/admin/reject", (req, res) => {
+app.post("/api/admin/reject", async (req, res) => {
   if (!hasValidSession(req)) return res.status(401).json({ error: "Unauthorized" });
   const id = Number(req.body?.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: "Missing id" });
-  db.prepare(
+  await db.run(
     "UPDATE claims SET status = 'rejected', reviewed_at = ? WHERE id = ?",
-  ).run(new Date().toISOString(), id);
+    [new Date().toISOString(), id],
+  );
   res.json({ ok: true });
 });
 
 app.use(express.static(path.join(__dirname, "public")));
 
-app.listen(PORT, () => {
-  console.log(`MODO giveaway server running on http://localhost:${PORT}`);
+app.use((err, _req, res, _next) => {
+  console.error(err);
+  res.status(500).json({ error: "Something went wrong, try again." });
 });
+
+(async () => {
+  try {
+    await db.init();
+    const storage = db.isTurso ? "Turso (cloud)" : "local SQLite";
+    app.listen(PORT, () => {
+      console.log(
+        `MODO giveaway server running on http://localhost:${PORT} (storage: ${storage})`,
+      );
+    });
+  } catch (err) {
+    console.error("Failed to initialize storage:", err);
+    process.exit(1);
+  }
+})();
