@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Giveaway admin | MODO Giveaway</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="admin-page">
+    <div class="admin-wrap">
+      <div class="admin-header">
+        <div>
+          <h1>Giveaway admin</h1>
+          <div class="chips">
+            <span class="chip chip-amber" id="chip-pending">0 pending</span>
+            <span class="chip chip-green" id="chip-approved">0 approved</span>
+            <span class="chip chip-red" id="chip-rejected">0 rejected</span>
+          </div>
+        </div>
+        <button id="logout-btn" class="btn-ghost">Sign out</button>
+      </div>
+
+      <div class="card-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Password submitted</th>
+              <th>Status</th>
+              <th>Submitted</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const tbody = document.getElementById("rows");
+    const STATUS_BADGE = {
+      pending: { label: "Pending", cls: "badge-pending" },
+      approved: { label: "Approved", cls: "badge-approved" },
+      rejected: { label: "Rejected", cls: "badge-rejected" },
+    };
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function fmt(iso) {
+      return iso ? new Date(iso).toLocaleString() : "";
+    }
+
+    function render(claims) {
+      const pending = claims.filter((c) => c.status === "pending").length;
+      const approved = claims.filter((c) => c.status === "approved").length;
+      const rejected = claims.filter((c) => c.status === "rejected").length;
+      document.getElementById("chip-pending").textContent = pending + " pending";
+      document.getElementById("chip-approved").textContent = approved + " approved";
+      document.getElementById("chip-rejected").textContent = rejected + " rejected";
+
+      if (claims.length === 0) {
+        tbody.innerHTML =
+          '<tr><td colspan="6"><div class="empty">No submissions yet. Share the claim page with your winners.</div></td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = claims
+        .map((c) => {
+          const badge = STATUS_BADGE[c.status];
+          let actions;
+          if (c.status === "pending") {
+            actions = `
+              <div class="review">
+                <input type="password" autocomplete="off" placeholder="Password given to client" data-id="${c.id}" />
+                <button class="btn btn-sm btn-green" data-act="approve" data-id="${c.id}">Approve</button>
+                <button class="btn btn-sm btn-red" data-act="reject" data-id="${c.id}">Reject</button>
+                <span class="review-error" data-id="${c.id}"></span>
+              </div>`;
+          } else {
+            actions =
+              `<span class="muted">${c.status} on ${fmt(c.reviewed_at)}</span>`;
+          }
+          return `<tr data-id="${c.id}">
+            <td>${escapeHtml(c.name)}</td>
+            <td>${escapeHtml(c.email)}</td>
+            <td><span class="mono">${escapeHtml(c.password)}</span></td>
+            <td><span class="badge ${badge.cls}">${badge.label}</span></td>
+            <td class="muted">${fmt(c.created_at)}</td>
+            <td>${actions}</td>
+          </tr>`;
+        })
+        .join("");
+    }
+
+    async function load() {
+      try {
+        const res = await fetch("/api/admin/claims");
+        if (res.status === 401) {
+          location.href = "/admin";
+          return;
+        }
+        const data = await res.json();
+        if (res.ok) render(data.claims);
+      } catch (e) {
+        tbody.innerHTML =
+          '<tr><td colspan="6"><div class="empty">Failed to load. Refreshing...</div></td></tr>';
+        setTimeout(() => location.reload(), 1500);
+      }
+    }
+
+    document.getElementById("logout-btn").addEventListener("click", async () => {
+      await fetch("/api/admin/logout", { method: "POST" });
+      location.href = "/admin";
+    });
+
+    tbody.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-act]");
+      if (!btn) return;
+      const id = Number(btn.dataset.id);
+      const row = tbody.querySelector(`tr[data-id="${id}"]`);
+
+      if (btn.dataset.act === "reject") {
+        btn.disabled = true;
+        const res = await fetch("/api/admin/reject", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id }),
+        });
+        if (res.status === 401) return location.href = "/admin";
+        if (res.ok) return load();
+        btn.disabled = false;
+        return;
+      }
+
+      const input = tbody.querySelector(`input[data-id="${id}"]`);
+      const password = (input?.value ?? "").trim();
+      const errEl = row?.querySelector(".review-error");
+      if (errEl) errEl.textContent = "";
+
+      if (!password) {
+        if (errEl) errEl.textContent = "Type the password you gave this client first.";
+        return;
+      }
+
+      btn.disabled = true;
+      const res = await fetch("/api/admin/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, password }),
+      });
+      if (res.status === 401) return location.href = "/admin";
+      const data = await res.json();
+      if (res.ok) {
+        load();
+      } else {
+        if (errEl) errEl.textContent = data.error || "Something went wrong";
+        btn.disabled = false;
+      }
+    });
+
+    load();
+  </script>
+</body>
+</html>

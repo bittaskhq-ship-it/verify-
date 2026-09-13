@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MODO Giveaway</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="gradient-bg">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <div class="card">
+      <h1 class="big-heading grad-text">MODO giveaway</h1>
+      <p class="eyebrow">Limited time</p>
+      <h2 class="title">You're a winner!</h2>
+      <p class="subtitle">
+        Enter the name, email and password you used to enter the giveaway to
+        claim your prize.
+      </p>
+
+      <form id="claim-form" class="form" novalidate>
+        <div class="field">
+          <label for="name">Your name</label>
+          <input id="name" name="name" type="text" autocomplete="name" placeholder="Jane Doe" />
+        </div>
+        <div class="field">
+          <label for="email">Your email</label>
+          <input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" />
+        </div>
+        <div class="field">
+          <label for="password">Your password</label>
+          <input id="password" name="password" type="text" autocomplete="off" placeholder="e.g. jane_doe123" class="mono" />
+        </div>
+
+        <div id="alert" class="alert alert-red" style="display: none"></div>
+
+        <button id="submit-btn" type="submit" class="btn btn-block">Claim now</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="modal" class="modal-backdrop" style="display: none" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modal-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M8 21h8" />
+          <path d="M12 17v4" />
+          <path d="M7 4h10v4a5 5 0 0 1-10 0V4Z" />
+          <path d="M7 6H4a1 1 0 0 0-1 1v1a3 3 0 0 0 3 3" />
+          <path d="M17 6h3a1 1 0 0 1 1 1v1a3 3 0 0 1-3 3" />
+        </svg>
+      </div>
+      <h2 id="modal-title">Congratulations!</h2>
+      <p id="modal-text">Your entry was received. An admin will verify it shortly.</p>
+      <button id="modal-close" class="btn btn-block">Got it</button>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("claim-form");
+    const alertBox = document.getElementById("alert");
+    const submitBtn = document.getElementById("submit-btn");
+    const modal = document.getElementById("modal");
+    const modalTitle = document.getElementById("modal-title");
+    const modalText = document.getElementById("modal-text");
+
+    function showAlert(msg) {
+      alertBox.textContent = msg;
+      alertBox.style.display = "block";
+    }
+
+    function hideAlert() {
+      alertBox.style.display = "none";
+    }
+
+    function openCongrats() {
+      modalTitle.textContent = "Congratulations!";
+      modalText.innerHTML =
+        "Your entry was received. An admin will verify it shortly.";
+      modal.style.display = "flex";
+    }
+
+    document.getElementById("modal-close").addEventListener("click", () => {
+      modal.style.display = "none";
+    });
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      hideAlert();
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Claiming...";
+
+      const payload = Object.fromEntries(new FormData(form).entries());
+
+      try {
+        const res = await fetch("/api/claim", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showAlert(data.error || "Something went wrong. Please try again.");
+        } else {
+          form.reset();
+          openCongrats();
+        }
+      } catch {
+        showAlert("Something went wrong. Please try again later.");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Claim now";
+      }
+    });
+  </script>
+</body>
+</html>

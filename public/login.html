@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin login | MODO Giveaway</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="gradient-bg">
+    <div class="card">
+      <h1 class="title" style="margin-top: 0">Admin access</h1>
+      <p class="subtitle">Enter the admin password to manage giveaway entries.</p>
+
+      <form id="login-form" class="form" novalidate>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required />
+        </div>
+        <div id="alert" class="alert alert-red" style="display: none"></div>
+        <button id="login-btn" type="submit" class="btn btn-block">Sign in</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("login-form");
+    const alertBox = document.getElementById("alert");
+    const btn = document.getElementById("login-btn");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      alertBox.style.display = "none";
+      btn.disabled = true;
+      btn.textContent = "Signing in...";
+
+      try {
+        const res = await fetch("/api/admin/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password: document.getElementById("password").value }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alertBox.textContent = data.error || "Incorrect password";
+          alertBox.style.display = "block";
+        } else {
+          location.href = "/admin";
+        }
+      } catch {
+        alertBox.textContent = "Something went wrong. Please try again.";
+        alertBox.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Sign in";
+      }
+    });
+  </script>
+</body>
+</html>
