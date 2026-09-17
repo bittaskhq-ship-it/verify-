@@ -4,6 +4,11 @@ const fs = require("node:fs");
 const { createHmac, timingSafeEqual } = require("node:crypto");
 const db = require("./lib/db");
 
+const envFile = path.join(__dirname, ".env.local");
+if (fs.existsSync(envFile)) {
+  require("dotenv").config({ path: envFile, quiet: true });
+}
+
 const PORT = Number(process.env.PORT) || 3000;
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 
@@ -63,21 +68,6 @@ function hasValidSession(req) {
   return Number(payload) > Date.now();
 }
 
-const rateLimits = new Map();
-function allowClaim(ip) {
-  const now = Date.now();
-  const times = (rateLimits.get(ip) ?? []).filter(
-    (t) => now - t < 60_000,
-  );
-  if (times.length >= 12) {
-    rateLimits.set(ip, times);
-    return false;
-  }
-  times.push(now);
-  rateLimits.set(ip, times);
-  return true;
-}
-
 app.get("/", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "claim.html"));
 });
@@ -87,21 +77,30 @@ app.post("/api/claim", async (req, res) => {
     req.headers["x-forwarded-for"]?.split(",")[0].trim() ||
     req.socket.remoteAddress ||
     "local";
-  if (!allowClaim(ip))
-    return res
-      .status(429)
-      .json({ error: "Too many attempts. Please wait a moment and try again." });
 
-  const name = String(req.body?.name ?? "").trim();
-  const email = String(req.body?.email ?? "").trim();
-  const password = String(req.body?.password ?? "").trim();
+  try {
+    if (!(await db.claimAllowed(ip))) {
+      return res
+        .status(429)
+        .json({ error: "Too many attempts. Please wait a moment and try again." });
+    }
 
-  await db.run(
-    "INSERT INTO claims (name, email, password, status, created_at) VALUES (?, ?, ?, 'pending', ?)",
-    [name, email, password, new Date().toISOString()],
-  );
+    const name = String(req.body?.name ?? "").trim();
+    const email = String(req.body?.email ?? "").trim();
+    const password = String(req.body?.password ?? "").trim();
 
-  res.json({ ok: true, name, email });
+    const { claimCode } = await db.insertClaim({
+      name,
+      email,
+      password,
+      createdAt: new Date().toISOString(),
+    });
+
+    res.json({ ok: true, name, email, claimCode });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Something went wrong, try again." });
+  }
 });
 
 app.get("/admin", (_req, res) => {
@@ -132,11 +131,13 @@ app.post("/api/admin/logout", (_req, res) => {
 
 app.get("/api/admin/claims", async (_req, res) => {
   if (!hasValidSession(_req)) return res.status(401).json({ error: "Unauthorized" });
-  const claims = await db.all(
-    `SELECT * FROM claims
-     ORDER BY CASE status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 ELSE 2 END, id DESC`,
-  );
-  res.json({ claims });
+  try {
+    const claims = await db.listClaims();
+    res.json({ claims });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Something went wrong, try again." });
+  }
 });
 
 app.post("/api/admin/approve", async (req, res) => {
@@ -146,33 +147,34 @@ app.post("/api/admin/approve", async (req, res) => {
   if (!Number.isFinite(id) || !password) {
     return res.status(400).json({ error: "Missing id or password" });
   }
-  const row = await db.get(
-    "SELECT id, password FROM claims WHERE id = ?",
-    [id],
-  );
-  if (!row) return res.status(404).json({ error: "Claim not found" });
-  if (row.password !== password) {
-    return res.status(400).json({
-      error:
-        "Password doesn't match the one submitted. If the entry looks wrong, reject it.",
-    });
+  try {
+    const row = await db.getClaimById(id);
+    if (!row) return res.status(404).json({ error: "Claim not found" });
+    if (row.password !== password) {
+      return res.status(400).json({
+        error:
+          "Password doesn't match the one submitted. If the entry looks wrong, reject it.",
+      });
+    }
+    await db.setClaimStatus(id, "approved");
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Something went wrong, try again." });
   }
-  await db.run(
-    "UPDATE claims SET status = 'approved', reviewed_at = ? WHERE id = ?",
-    [new Date().toISOString(), id],
-  );
-  res.json({ ok: true });
 });
 
 app.post("/api/admin/reject", async (req, res) => {
   if (!hasValidSession(req)) return res.status(401).json({ error: "Unauthorized" });
   const id = Number(req.body?.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: "Missing id" });
-  await db.run(
-    "UPDATE claims SET status = 'rejected', reviewed_at = ? WHERE id = ?",
-    [new Date().toISOString(), id],
-  );
-  res.json({ ok: true });
+  try {
+    await db.setClaimStatus(id, "rejected");
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Something went wrong, try again." });
+  }
 });
 
 app.use(express.static(path.join(__dirname, "public")));
@@ -182,17 +184,6 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: "Something went wrong, try again." });
 });
 
-(async () => {
-  try {
-    await db.init();
-    const storage = db.isTurso ? "Turso (cloud)" : "local SQLite";
-    app.listen(PORT, () => {
-      console.log(
-        `MODO giveaway server running on http://localhost:${PORT} (storage: ${storage})`,
-      );
-    });
-  } catch (err) {
-    console.error("Failed to initialize storage:", err);
-    process.exit(1);
-  }
-})();
+app.listen(PORT, () => {
+  console.log(`MODO giveaway server running on http://localhost:${PORT} (storage: Supabase)`);
+});

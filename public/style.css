@@ -66,11 +66,12 @@ body {
 }
 
 .big-heading {
-  font-size: 40px;
+  font-size: 30px;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: -0.5px;
   text-align: center;
+  white-space: nowrap;
 }
 
 .eyebrow {
@@ -129,6 +130,24 @@ body {
 .field input:focus {
   border-color: #d946ef;
   box-shadow: 0 0 0 4px rgba(217, 70, 239, 0.15);
+}
+
+.field-check .check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #3f3f46;
+  cursor: pointer;
+  user-select: none;
+}
+
+.field-check input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #c026d3;
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
 .mono {
@@ -232,6 +251,60 @@ body {
 
 .modal .btn {
   margin-top: 24px;
+}
+
+.claim-code {
+  margin-top: 18px;
+  text-align: left;
+  background: #faf5ff;
+  border: 1px solid #e9d5ff;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.code-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #a21caf;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.claim-code-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.claim-code-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.2em;
+  color: #18181b;
+  background: #fff;
+  outline: none;
+}
+
+.code-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #71717a;
+  text-align: center;
+}
+
+.code-hint-top {
+  margin-top: 16px;
+}
+
+.claim-code-row input:focus {
+  border-color: #d946ef;
 }
 
 /* Admin */
@@ -396,4 +469,24 @@ tbody tr:hover { background: #fafafa; }
   font-size: 12px;
   color: #a1a1aa;
   text-align: center;
+}
+
+.get-started {
+  position: relative;
+  margin-top: 24px;
+  display: inline-block;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: #7c3aed;
+  border: 1px solid #ddd6fe;
+  background: #fff;
+  border-radius: 9999px;
+  padding: 10px 22px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.get-started:hover {
+  background: #f5f3ff;
+  border-color: #c4b5fd;
 }

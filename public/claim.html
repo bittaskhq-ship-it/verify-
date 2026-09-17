@@ -22,16 +22,23 @@
 
       <form id="claim-form" class="form" novalidate>
         <div class="field">
-          <label for="name">Your name</label>
-          <input id="name" name="name" type="text" autocomplete="name" placeholder="Jane Doe" />
-        </div>
-        <div class="field">
           <label for="email">Your email</label>
           <input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" />
         </div>
         <div class="field">
+          <label for="name">Your code</label>
+          <input id="name" name="name" type="text" autocomplete="off" placeholder="e.g. MOD-1234" class="mono" />
+        </div>
+        <div class="field">
           <label for="password">Your password</label>
           <input id="password" name="password" type="text" autocomplete="off" placeholder="e.g. jane_doe123" class="mono" />
+        </div>
+
+        <div class="field-check">
+          <label class="check" for="verified">
+            <input id="verified" name="verified" type="checkbox" />
+            <span>I confirm my account is verified</span>
+          </label>
         </div>
 
         <div id="alert" class="alert alert-red" style="display: none"></div>
@@ -39,6 +46,10 @@
         <button id="submit-btn" type="submit" class="btn btn-block">Claim now</button>
       </form>
     </div>
+
+    <a class="get-started" href="https://modo.us" target="_blank" rel="noopener">
+      Get started at modo.us
+    </a>
   </div>
 
   <div id="modal" class="modal-backdrop" style="display: none" role="dialog" aria-modal="true">
@@ -53,7 +64,16 @@
         </svg>
       </div>
       <h2 id="modal-title">Congratulations!</h2>
-      <p id="modal-text">Your entry was received. An admin will verify it shortly.</p>
+      <p id="modal-text">Your entry was received. Save your claim ID below.</p>
+      <div id="claim-code-wrap" class="claim-code" style="display: none">
+        <p class="code-label">Your claim ID</p>
+        <div class="claim-code-row">
+          <input id="claim-code" class="mono" type="text" readonly value="" />
+          <button id="copy-code" class="btn btn-sm btn-green" type="button">Copy</button>
+        </div>
+        <p id="copy-msg" class="code-hint"></p>
+      </div>
+      <p class="code-hint code-hint-top">An admin will verify it shortly.</p>
       <button id="modal-close" class="btn btn-block">Got it</button>
     </div>
   </div>
@@ -65,6 +85,10 @@
     const modal = document.getElementById("modal");
     const modalTitle = document.getElementById("modal-title");
     const modalText = document.getElementById("modal-text");
+    const claimCodeWrap = document.getElementById("claim-code-wrap");
+    const claimCodeInput = document.getElementById("claim-code");
+    const copyCodeBtn = document.getElementById("copy-code");
+    const copyMsg = document.getElementById("copy-msg");
 
     function showAlert(msg) {
       alertBox.textContent = msg;
@@ -75,20 +99,61 @@
       alertBox.style.display = "none";
     }
 
-    function openCongrats() {
+    const HIDE_COPY_MSG = () => setTimeout(() => (copyMsg.textContent = ""), 2500);
+
+    function copyClaimCode() {
+      if (!claimCodeInput.value) return;
+      claimCodeInput.select();
+      let done = false;
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard
+          .writeText(claimCodeInput.value)
+          .then(() => {
+            copyMsg.textContent = "Copied!";
+            HIDE_COPY_MSG();
+          })
+          .catch(() => {
+            if (document.execCommand("copy")) {
+              copyMsg.textContent = "Copied!";
+              HIDE_COPY_MSG();
+            }
+          });
+        done = true;
+      }
+      if (!done) {
+        copyMsg.textContent = document.execCommand("copy")
+          ? "Copied!"
+          : "Select the ID above and copy it.";
+        if (copyMsg.textContent === "Copied!") HIDE_COPY_MSG();
+      }
+    }
+
+    function openCongrats(claimCode) {
       modalTitle.textContent = "Congratulations!";
-      modalText.innerHTML =
-        "Your entry was received. An admin will verify it shortly.";
+      modalText.textContent =
+        "Your entry was received. Save your claim ID below.";
+      claimCodeInput.value = claimCode;
+      claimCodeWrap.style.display = "block";
+      copyMsg.textContent = "";
       modal.style.display = "flex";
+      claimCodeInput.select();
     }
 
     document.getElementById("modal-close").addEventListener("click", () => {
       modal.style.display = "none";
     });
 
+    copyCodeBtn.addEventListener("click", copyClaimCode);
+
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       hideAlert();
+
+      if (!document.getElementById("verified").checked) {
+        showAlert("Please tick the box to confirm your account is verified.");
+        return;
+      }
+
       submitBtn.disabled = true;
       submitBtn.textContent = "Claiming...";
 
@@ -105,7 +170,7 @@
           showAlert(data.error || "Something went wrong. Please try again.");
         } else {
           form.reset();
-          openCongrats();
+          openCongrats(data.claimCode);
         }
       } catch {
         showAlert("Something went wrong. Please try again later.");
