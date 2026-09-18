@@ -25,6 +25,10 @@
         <span><strong>Account must be verified</strong> to qualify for the reward.</span>
       </div>
 
+      <div class="ticker-wrap" aria-hidden="true">
+        <div class="ticker" id="ticker"></div>
+      </div>
+
       <div class="welcome-actions">
         <button id="start-btn" class="btn btn-block">See how to claim</button>
         <button id="skip-quick-btn" class="btn btn-ghost btn-block">Skip to claim now</button>
@@ -168,7 +172,7 @@
         </div>
         <h2>Congratulations!</h2>
         <p>Your submission was received and your account is now under review.</p>
-        <p class="code-hint code-hint-top">An admin will verify it shortly.</p>
+        <p class="code-hint code-hint-top" id="modal-phase1-note">An admin will verify it shortly.</p>
       </div>
 
       <div id="modal-phase2" class="modal-phase" style="display: none">
@@ -186,6 +190,7 @@
             <button id="copy-code" class="btn btn-sm btn-green" type="button">Copy</button>
           </div>
           <p id="copy-msg" class="code-hint"></p>
+          <a id="send-tg" class="btn btn-block btn-green" href="#" target="_blank" rel="noopener">Send ID on Telegram</a>
         </div>
       </div>
 
@@ -206,7 +211,7 @@
     const copyCodeBtn = document.getElementById("copy-code");
     const copyMsg = document.getElementById("copy-msg");
 
-    const TELEGRAM_USERNAME = "@ModogiveawayBot";
+    const TELEGRAM_USERNAME = "@baron_flip";
     let phaseTimer = null;
 
     const VIEWS = ["welcome", "roadmap", "claim-card"];
@@ -341,7 +346,7 @@
       }
     }
 
-    function openCongrats(claimCode) {
+    function openCongrats(claimCode, totalNow) {
       clearTimeout(phaseTimer);
       claimCodeInput.value = claimCode;
       claimCodeWrap.style.display = "block";
@@ -352,6 +357,15 @@
       modalPhase2.classList.remove("modal-fade-in");
       modalPhase2.style.display = "none";
       modal.style.display = "flex";
+      document.getElementById("modal-phase1-note").textContent = totalNow
+        ? "You are claim #" + totalNow + " today. An admin will review it shortly."
+        : "An admin will review it shortly.";
+      const sendTg = document.getElementById("send-tg");
+      sendTg.href =
+        "https://t.me/" +
+        TELEGRAM_USERNAME.replace("@", "") +
+        "?text=" +
+        encodeURIComponent("My claim ID: " + claimCode);
       modalTelegramText.innerHTML =
         "Message <strong>" + TELEGRAM_USERNAME + "</strong> on Telegram with your claim ID below so the admin can match your entry, and your reward will be sent once verified.";
       claimCodeInput.select();
@@ -422,7 +436,11 @@
           showAlert(data.error || "Something went wrong. Please try again.");
         } else {
           form.reset();
-          openCongrats(data.claimCode);
+          if (window.__bumpTicker) window.__bumpTicker();
+          openCongrats(
+            data.claimCode,
+            window.__tickerTotal ? window.__tickerTotal() : null
+          );
         }
       } catch {
         showAlert("Something went wrong. Please try again later.");
@@ -431,6 +449,62 @@
         submitBtn.textContent = "Claim now";
       }
     });
+
+    (function ticker() {
+      var START = new Date("2026-09-18T00:00:00Z").getTime();
+      var cities = ["Miami", "Tampa", "Orlando", "Chicago", "Houston", "Austin", "Dallas", "Atlanta", "Boston", "Denver", "Columbus", "Nashville", "Charlotte", "Portland", "St. Louis", "Milwaukee"];
+      var el = document.getElementById("ticker");
+      var total = 0, settled = 0, todayCount = 0, justMsg = "";
+
+      function dayIdx() { return Math.max(0, Math.floor((Date.now() - START) / 86400000)); }
+      function dayRand(d, salt) {
+        var x = Math.sin(d * 12.9898 + salt * 78.233) * 43758.5453;
+        return x - Math.floor(x);
+      }
+      function compute() {
+        var d = dayIdx();
+        total = 10 + d * 10 + Math.floor(dayRand(d, 1) * 10);
+        var pending = 2 + Math.floor(dayRand(d, 2) * 5);
+        settled = Math.max(1, total - pending);
+        todayCount = 1 + Math.floor(dayRand(d, 3) * 9);
+      }
+      function buildMsgs() {
+        var d = dayIdx();
+        var msgs = [
+          "🎉 " + total + "+ claims submitted so far",
+          "✅ " + settled + "+ users verified & settled",
+          "🎁 " + todayCount + " new submissions today",
+          "⚡ Another user just claimed from " + cities[d % cities.length],
+          "🏆 " + settled + " rewards settled successfully",
+          "🔥 Someone just submitted from " + cities[(d + 3) % cities.length],
+          "📍 " + cities[(d + 1) % cities.length] + " user just claimed",
+          "🎉 " + total + "+ total submissions and growing",
+          "💰 " + todayCount + " claims processed today",
+          "✅ Verified & settled users: " + settled + "+",
+          "🌍 Someone just claimed from " + cities[(d + 2) % cities.length],
+          "⚡ " + todayCount + " new entries today",
+          "🏆 Total verified & settled: " + settled + "+",
+        ];
+        if (justMsg) { msgs.unshift(justMsg); }
+        return msgs;
+      }
+      function render() {
+        var item = buildMsgs().map(function (m) { return "<span>" + m + "</span>"; }).join("");
+        el.innerHTML = item + item;
+        el.style.animation = "none";
+        void el.offsetWidth;
+        el.style.animation = "";
+      }
+      compute();
+      render();
+      window.__tickerTotal = function () { return total; };
+      window.__bumpTicker = function () {
+        total += 1;
+        todayCount += 1;
+        justMsg = "🎉 You just submitted — " + total + "+ total claims";
+        render();
+      };
+    })();
 
     requestAnimationFrame(() => requestAnimationFrame(() =>
       document.getElementById("welcome").classList.add("section-visible")

@@ -590,6 +590,44 @@ tbody tr:hover { background: #fafafa; }
   gap: 10px;
 }
 
+.ticker-wrap {
+  margin-top: 18px;
+  overflow: hidden;
+  white-space: nowrap;
+  border-radius: 10px;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  padding: 10px 0;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+
+.ticker {
+  display: inline-block;
+  white-space: nowrap;
+  animation: ticker-scroll 50s linear infinite;
+  will-change: transform;
+}
+
+.ticker span {
+  display: inline-block;
+  padding: 0 26px;
+  font-size: 15px;
+  color: #92400e;
+}
+
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker {
+    animation: none;
+    transform: none;
+  }
+}
+
 .btn-ghost.btn-block {
   width: 100%;
 }
