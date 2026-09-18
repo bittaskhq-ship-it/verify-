@@ -1,4 +1,4 @@
-const { getClaimById, setClaimStatus } = require("../../lib/db");
+const { deleteClaim } = require("../../lib/db");
 const { hasValidSession } = require("./lib/auth");
 const { ok, fail, unauthorized } = require("./lib/http");
 
@@ -13,18 +13,13 @@ exports.handler = async (event) => {
     }
 
     const id = Number(body.id);
-    if (!Number.isFinite(id)) {
-      return fail(400, "Missing id");
-    }
+    if (!Number.isFinite(id)) return fail(400, "Missing id");
 
-    const row = await getClaimById(id);
-    if (!row) return fail(404, "Claim not found");
-
-    await setClaimStatus(id, "approved");
+    await deleteClaim(id);
 
     return ok({ ok: true });
   } catch (err) {
-    console.error("admin-approve handler error:", err);
+    console.error("admin-delete handler error:", err);
     return fail(500, "Something went wrong, try again.");
   }
 };

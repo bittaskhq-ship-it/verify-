@@ -15,6 +15,7 @@ create table if not exists public.claims (
 
 -- Upgrade path if an older version of this schema was already applied.
 alter table public.claims add column if not exists claim_code text;
+alter table public.claims add column if not exists deleted boolean not null default false;
 
 create unique index if not exists claims_claim_code_idx on public.claims (claim_code);
 

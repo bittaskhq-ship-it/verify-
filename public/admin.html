@@ -82,14 +82,26 @@
           if (c.status === "pending") {
             actions = `
               <div class="review">
-                <input type="password" autocomplete="off" placeholder="Password given to client" data-id="${c.id}" />
-                <button class="btn btn-sm btn-green" data-act="approve" data-id="${c.id}">Approve</button>
-                <button class="btn btn-sm btn-red" data-act="reject" data-id="${c.id}">Reject</button>
+                <button class="icon-btn icon-btn-green" data-act="approve" data-id="${c.id}" title="Approve" aria-label="Approve">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                </button>
+                <button class="icon-btn icon-btn-red" data-act="reject" data-id="${c.id}" title="Reject" aria-label="Reject">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                </button>
+                <button class="icon-btn icon-btn-red-outline" data-act="delete" data-id="${c.id}" title="Delete" aria-label="Delete">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M10 11v6" /><path d="M14 11v6" /></svg>
+                </button>
                 <span class="review-error" data-id="${c.id}"></span>
               </div>`;
           } else {
             actions =
-              `<span class="muted">${c.status} on ${fmt(c.reviewed_at)}</span>`;
+              `<span class="review-inline"><span class="muted">${c.status} on ${fmt(c.reviewed_at)}</span>` +
+              (c.status === "rejected"
+                ? ` <button class="icon-btn icon-btn-red-outline" data-act="delete" data-id="${c.id}" title="Delete" aria-label="Delete">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M10 11v6" /><path d="M14 11v6" /></svg>
+                  </button>`
+                : "") +
+              `</span>`;
           }
           return `<tr data-id="${c.id}">
             <td>${escapeHtml(c.name)}</td>
@@ -131,6 +143,20 @@
       const id = Number(btn.dataset.id);
       const row = tbody.querySelector(`tr[data-id="${id}"]`);
 
+      if (btn.dataset.act === "delete") {
+        if (!confirm("Move this submission to deleted? It will be hidden from this panel but kept in the database.")) return;
+        btn.disabled = true;
+        const res = await fetch("/api/admin/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id }),
+        });
+        if (res.status === 401) return (location.href = "/login.html");
+        if (res.ok) return load();
+        btn.disabled = false;
+        return;
+      }
+
       if (btn.dataset.act === "reject") {
         btn.disabled = true;
         const res = await fetch("/api/admin/reject", {
@@ -144,21 +170,14 @@
         return;
       }
 
-      const input = tbody.querySelector(`input[data-id="${id}"]`);
-      const password = (input?.value ?? "").trim();
       const errEl = row?.querySelector(".review-error");
       if (errEl) errEl.textContent = "";
-
-      if (!password) {
-        if (errEl) errEl.textContent = "Type the password you gave this client first.";
-        return;
-      }
 
       btn.disabled = true;
       const res = await fetch("/api/admin/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, password }),
+        body: JSON.stringify({ id }),
       });
       if (res.status === 401) return location.href = "/login.html";
       const data = await res.json();

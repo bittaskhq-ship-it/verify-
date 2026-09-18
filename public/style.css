@@ -197,6 +197,17 @@ body {
   border: 1px solid #fde68a;
 }
 
+.field-error {
+  display: none;
+  color: #b91c1c;
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.field-error.visible {
+  display: block;
+}
+
 /* Congrats modal */
 .modal-backdrop {
   position: fixed;
@@ -217,6 +228,18 @@ body {
   padding: 32px 24px;
   text-align: center;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.modal-phase {
+  transition: opacity 0.7s ease;
+}
+
+.modal-fade-out {
+  opacity: 0;
+}
+
+.modal-fade-in {
+  opacity: 0;
 }
 
 .modal-icon {
@@ -435,10 +458,67 @@ tbody tr:hover { background: #fafafa; }
   border-radius: 8px;
 }
 
+.review-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.icon-btn-green {
+  color: #059669;
+  border-color: #a7f3d0;
+}
+.icon-btn-green:hover {
+  background: #d1fae5;
+}
+
+.icon-btn-red {
+  color: #dc2626;
+  border-color: #fecaca;
+}
+.icon-btn-red:hover {
+  background: #fee2e2;
+}
+
+.icon-btn-red-outline {
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+}
+.icon-btn-red-outline:hover {
+  background: #fef2f2;
+}
+
 .btn-green { background: #059669; }
 .btn-green:hover { filter: brightness(1.08); }
 .btn-red { background: #dc2626; }
 .btn-red:hover { filter: brightness(1.08); }
+.btn-red-outline {
+  background: #fff;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+}
+.btn-red-outline:hover {
+  background: #fef2f2;
+}
 
 .btn-ghost {
   background: #fff;
