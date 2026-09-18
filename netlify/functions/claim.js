@@ -34,7 +34,7 @@ exports.handler = async (event) => {
       createdAt: new Date().toISOString(),
     });
 
-    sendClaimNotification({
+    await sendClaimNotification({
       id: row.id,
       name,
       email,

@@ -97,7 +97,7 @@ app.post("/api/claim", async (req, res) => {
       createdAt: new Date().toISOString(),
     });
 
-    sendClaimNotification({
+    await sendClaimNotification({
       id: row.id,
       name,
       email,
