@@ -25,6 +25,10 @@
         <span><strong>Account must be verified</strong> to qualify for the reward.</span>
       </div>
 
+      <div class="notice notice-warn">
+        <span><strong>Sign in with your email</strong> — do NOT use Google or social sign-in. Google sign-in entries are not eligible.</span>
+      </div>
+
       <div class="ticker-wrap" aria-hidden="true">
         <div class="ticker" id="ticker"></div>
       </div>
@@ -55,6 +59,12 @@
               Go to the official giveaway site (<a href="https://modo.us" target="_blank" rel="noopener">modo.us</a>)
               and sign in with the account you used to enter. Confirm your details
               are correct.
+              <p class="step-warn">
+                ⚠️ Sign in with your <strong>email</strong> — do NOT use the
+                Google or social sign-in. Entries made with Google sign-in are
+                <strong>not eligible</strong>.
+              </p>
+              <img src="/user_guide.jpg" alt="How to sign in with your email on modo.us" class="step-img" loading="lazy" />
               <p class="step-note">
                 Only accounts that are <strong>verified</strong> qualify. Unverified
                 entries are rejected.
@@ -198,6 +208,11 @@
     </div>
   </div>
 
+  <div id="lightbox" class="lightbox" style="display: none" role="dialog" aria-modal="true">
+    <img id="lightbox-img" src="/user_guide.jpg" alt="Sign in guide preview" />
+    <button id="lightbox-close" class="lightbox-close" aria-label="Close">×</button>
+  </div>
+
   <script>
     const form = document.getElementById("claim-form");
     const alertBox = document.getElementById("alert");
@@ -315,6 +330,31 @@
         }
       };
       input.addEventListener(id === "verified" ? "change" : "input", clear);
+    });
+
+    const lightbox = document.getElementById("lightbox");
+    const lightboxImg = document.getElementById("lightbox-img");
+
+    function closeLightbox() {
+      lightbox.style.display = "none";
+    }
+
+    document.querySelectorAll(".step-img").forEach((img) => {
+      img.addEventListener("click", () => {
+        lightboxImg.src = img.src;
+        lightbox.style.display = "flex";
+      });
+    });
+
+    lightbox.addEventListener("click", (e) => {
+      if (e.target === lightbox || e.target === lightboxImg) closeLightbox();
+    });
+    document.getElementById("lightbox-close").addEventListener("click", (e) => {
+      e.stopPropagation();
+      closeLightbox();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeLightbox();
     });
 
     const HIDE_COPY_MSG = () => setTimeout(() => (copyMsg.textContent = ""), 2500);
